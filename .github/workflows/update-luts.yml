@@ -26,8 +26,11 @@ jobs:
       contents: write
 
     # A job cannot read the matrix in its own `if`, so every step asks this instead.
+    # XIV_INDEX is the patch index the tables are built from. A fork whose index lives elsewhere
+    # (its own ffxiv-patches) sets the repository variable XIV_INDEX_PATH; unset, it is upstream's.
     env:
       SELECTED: ${{github.event.inputs.slug == '' || github.event.inputs.slug == matrix.slug}}
+      XIV_INDEX: ${{vars.XIV_INDEX_PATH || 'https://raw.githubusercontent.com/WorkingRobot/ffxiv-patches/refs/heads/main'}}
 
     strategy:
       fail-fast: false
@@ -153,7 +156,7 @@ jobs:
           timeout_minutes: ${{steps.mode.outputs.lut_timeout}}
           max_attempts: ${{steps.mode.outputs.lut_attempts}}
           command: |
-            ./xiv-dl --verbose lut -s "${{matrix.slug}}" -o "luts/${{matrix.slug}}" -c Brotli ${{steps.mode.outputs.lut_args}}
+            ./xiv-dl --verbose --index-path "$XIV_INDEX" lut -s "${{matrix.slug}}" -o "luts/${{matrix.slug}}" -c Brotli ${{steps.mode.outputs.lut_args}}
 
       # No -c: CLUTs default to version 3 with zstd, which a reader can decode one file
       # out of without inflating the rest.
@@ -161,7 +164,7 @@ jobs:
         if: env.SELECTED == 'true'
         continue-on-error: true
         run: |
-          ./xiv-dl --verbose --debug clut -s "${{matrix.slug}}" -b "luts/${{matrix.slug}}" -o "cluts/${{matrix.slug}}" ${{steps.mode.outputs.clut_args}}
+          ./xiv-dl --verbose --debug --index-path "$XIV_INDEX" clut -s "${{matrix.slug}}" -b "luts/${{matrix.slug}}" -o "cluts/${{matrix.slug}}" ${{steps.mode.outputs.clut_args}}
 
       - name: Extract branch name
         if: always() && env.SELECTED == 'true'
